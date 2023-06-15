@@ -2,7 +2,7 @@
 
 $sql_host = "localhost";
 $sql_user = get_current_user();
-$sql_pass = "";
+$sql_pass = null;
 $sql_db = "";
 $create_table = false;
 $file = null;
@@ -31,4 +31,49 @@ Arguments:
 if (isset($args["help"])) {
     echo $help_output;
     exit(0);
+}
+
+if (isset($args["d"])) {
+    $sql_db = $args["d"];
+} else {
+    echo "Error: Database name is required.\n";
+    echo $help_output;
+    exit(1);
+}
+
+if (isset($args["h"])) {
+    $sql_host = $args["h"];
+}
+if (isset($args["u"])) {
+    $sql_user = $args["u"];
+}
+if (isset($args["p"])) {
+    $sql_pass = $args["p"];
+}
+
+if (isset($args["create_table"])) {
+    $create_table = true;
+}
+
+if ($create_table) {
+    $conn = new mysqli($sql_host, $sql_user, $sql_pass, $sql_db);
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+    $sql = "CREATE TABLE IF NOT EXISTS users (
+        id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(30) NOT NULL,
+        surname VARCHAR(30) NOT NULL,
+        email VARCHAR(50) NOT NULL UNIQUE
+    )";
+
+    if ($conn->query($sql) === false) {
+        echo "Error creating table: " . $conn->error . "\n";
+        $conn->close();
+        exit(1);
+    }
+
+    echo "Table created successfully.\n";
+    $conn->close();
 }
