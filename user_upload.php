@@ -8,6 +8,8 @@ $create_table = false;
 $file = null;
 $dry_run = false;
 
+set_exception_handler("exception_handler");
+
 $args = getopt("d:h:u:p:", ["file:", "create_table", "dry_run", "help"]);
 var_dump($args);
 
@@ -56,7 +58,12 @@ if (isset($args["create_table"])) {
 }
 
 if ($create_table) {
+    // try {
     $conn = new mysqli($sql_host, $sql_user, $sql_pass, $sql_db);
+    // } catch (Exception $e) {
+    //     echo "Error: " . $e->getMessage() . "\n";
+    //     exit(1);
+    // }
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
@@ -76,4 +83,10 @@ if ($create_table) {
 
     echo "Table created successfully.\n";
     $conn->close();
+}
+
+function exception_handler($exception)
+{
+    echo "Error: " . $exception->getMessage() . "\n";
+    exit(1);
 }
