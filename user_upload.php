@@ -20,7 +20,7 @@ Usage:
 
 Arguments:
     -d                MySQL database name.
-    -h                MySQL hostname. [default: $sql_host]
+    -h                MySQL hostname. Example: 203.0.113.50:3306 [default: $sql_host]
     -u                MySQL username. [default: $sql_user]
     -p                MySQL password. [default: $sql_pass]
     --create_table    Create a table called \"users\" in the database.
