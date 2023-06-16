@@ -85,6 +85,26 @@ if ($create_table) {
     $conn->close();
 }
 
+if (isset($args["file"])) {
+    $file = $args["file"];
+
+    if (!(is_readable($file))) {
+        echo "Error: File does not exist or is not readable.\n";
+        exit(1);
+    }
+
+    // Check MIME type
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = finfo_file($finfo, $file);
+    finfo_close($finfo);
+
+    if ($mime !== "text/plain" || $mime !== "text/csv") {
+        echo "Error: Invalid file type. Only CSV files are allowed.\n";
+        exit(1);
+    }
+}
+
+
 function exception_handler($exception)
 {
     echo "Error: " . $exception->getMessage() . "\n";
