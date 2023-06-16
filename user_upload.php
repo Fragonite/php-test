@@ -102,6 +102,37 @@ if (isset($args["file"])) {
         echo "Error: Invalid file type. Only CSV files are allowed.\n";
         exit(1);
     }
+
+    $file_pointer = fopen($file, "r");
+    $row = fgetcsv($file_pointer);
+    $row = array_map("trim", $row);
+    $row = array_map("strtolower", $row);
+    if (count($row) !== 3 || $row[0] !== "name" || $row[1] !== "surname" || $row[2] !== "email") {
+        echo "Error: Expected three columns in $file: name, surname, email\n";
+        exit(1);
+    }
+
+    $line_number = 1;
+    while (($row = fgetcsv($file_pointer)) !== false) {
+        if (count($row) !== 3) {
+            fwrite(STDERR, "Error: Expected three columns on line $line_number\n");
+            exit(1);
+        }
+
+
+        // Check if email is valid
+        if (!filter_var($row[2], FILTER_VALIDATE_EMAIL)) {
+            fwrite(STDERR, "Error: Invalid email address on line $line_number: $row[2]\n");
+            exit(1);
+        }
+
+        // Capitalise the first letter in name and surname
+        // Note this will wrongly capitalise surnames such as von der Leyen
+        // It is assumed surnames like McDonald are capitalised correctly
+        $row[0] = ucfirst($row[0]);
+        $row[1] = ucfirst($row[1]);
+        $line_number++;
+    }
 }
 
 
