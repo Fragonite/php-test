@@ -7,6 +7,8 @@ $sql_db = "";
 $create_table = false;
 $file = null;
 $dry_run = false;
+$no_log = false;
+$skip_invalid = false;
 
 set_exception_handler("exception_handler");
 
@@ -29,6 +31,8 @@ Arguments:
     --create_table    Create a table called \"users\" in the database.
     --file            CSV file path used to insert data into \"users\" table.
     --dry_run         Run the script without inserting data into \"users\" table.
+    --no_log          Do not log errors to \"user_upload.log\".
+    --skip_invalid    Skip invalid CSV records instead of exiting.
     --help            Show this help message.
 ";
 
@@ -52,6 +56,12 @@ if (isset($args["u"])) {
 }
 if (isset($args["p"])) {
     $sql_pass = $args["p"];
+}
+// if (isset($args["no_log"])) {
+//     $no_log = true;
+// }
+if (isset($args["skip_invalid"])) {
+    $skip_invalid = true;
 }
 
 if (isset($args["create_table"])) {
@@ -90,7 +100,7 @@ if (isset($args["file"])) {
     $file = $args["file"];
 
     if (!(is_readable($file))) {
-        echo "Error: File does not exist or is not readable.\n";
+        fwrite(STDERR, "Error: File does not exist or is not readable.\n");
         exit(1);
     }
 
@@ -99,8 +109,8 @@ if (isset($args["file"])) {
     $mime = finfo_file($finfo, $file);
     finfo_close($finfo);
 
-    if ($mime !== "text/plain" || $mime !== "text/csv") {
-        echo "Error: Invalid file type. Only CSV files are allowed.\n";
+    if (!($mime === "text/plain" || $mime === "text/csv")) {
+        fwrite(STDERR, "Error: Invalid file type. Only CSV files are allowed ($mime type found).\n");
         exit(1);
     }
 
@@ -109,16 +119,20 @@ if (isset($args["file"])) {
     $row = array_map("trim", $row);
     $row = array_map("strtolower", $row);
     if (count($row) !== 3 || $row[0] !== "name" || $row[1] !== "surname" || $row[2] !== "email") {
-        echo "Error: Expected three columns in $file: name, surname, email\n";
+        fwrite(STDERR, "Error: Expected three columns in $file: name, surname, email\n");
         exit(1);
     }
 
-    $line_number = 1;
+    $line_number = 2; // We already read line 1 (index 0)
+    $lines_read = 0;
     while (($row = fgetcsv($file_pointer)) !== false) {
         if (count($row) !== 3) {
             fwrite(STDERR, "Error: Expected three columns on line $line_number\n");
             exit(1);
         }
+
+        $row = array_map("trim", $row);
+        $row = array_map("strtolower", $row);
 
 
         // Check if email is valid
@@ -129,14 +143,12 @@ if (isset($args["file"])) {
 
         // Capitalise the first letter in name and surname
         // Note this will wrongly capitalise surnames such as von der Leyen
-        // It is assumed surnames like McDonald are capitalised correctly
+        // https://www.kalzumeus.com/2010/06/17/falsehoods-programmers-believe-about-names/
         $row[0] = ucfirst($row[0]);
         $row[1] = ucfirst($row[1]);
         $line_number++;
     }
 }
-
-
 function exception_handler($exception)
 {
     $timestamp = date("Y-m-d H:i:s");
