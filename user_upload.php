@@ -11,9 +11,10 @@ $dry_run = false;
 set_exception_handler("exception_handler");
 
 $args = getopt("d:h:u:p:", ["file:", "create_table", "dry_run", "help"]);
-var_dump($args);
+// var_dump($args);
 
-$help_output = "Description:
+$help_output = "
+Description:
     This example script can create and insert data into a table called \"users\".
     It takes a CSV file with three columns: name, surname, email.
 
@@ -28,7 +29,8 @@ Arguments:
     --create_table    Create a table called \"users\" in the database.
     --file            CSV file path used to insert data into \"users\" table.
     --dry_run         Run the script without inserting data into \"users\" table.
-    --help            Show this help message.";
+    --help            Show this help message.
+";
 
 if (isset($args["help"])) {
     echo $help_output;
@@ -38,7 +40,6 @@ if (isset($args["help"])) {
 if (isset($args["d"])) {
     $sql_db = $args["d"];
 } else {
-    echo "Error: Database name is required.\n";
     echo $help_output;
     exit(1);
 }
@@ -138,6 +139,8 @@ if (isset($args["file"])) {
 
 function exception_handler($exception)
 {
-    echo "Error: " . $exception->getMessage() . "\n";
+    $timestamp = date("Y-m-d H:i:s");
+    error_log("[$timestamp] " . $exception . "\n", 3, "user_upload.log");
+    fwrite(STDERR, "Error: " . $exception->getMessage() . "\n");
     exit(1);
 }
