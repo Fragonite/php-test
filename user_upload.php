@@ -28,10 +28,10 @@ Arguments:
     -h                MySQL hostname. Example: 203.0.113.50:3306 [default: $sql_host]
     -u                MySQL username. [default: $sql_user]
     -p                MySQL password. [default: $sql_pass]
-    --create_table    Create a table called \"users\" in the database.
+    --create_table    Create/truncate a table called 'users' in the database. Data can be permanently deleted.
     --file            CSV file path used to insert data into \"users\" table.
     --dry_run         Run the script without inserting data into \"users\" table.
-    --no_log          Do not log errors to \"user_upload.log\".
+    --no_log          Do not log exceptions to \"user_upload.log\".
     --skip_invalid    Skip invalid CSV records instead of exiting.
     --help            Show this help message.
 ";
@@ -60,12 +60,14 @@ if (isset($args["u"])) {
 if (isset($args["p"])) {
     $sql_pass = $args["p"];
 }
-if (isset($args["skip_invalid"])) {
-    $skip_invalid = true;
-}
-
 if (isset($args["create_table"])) {
     $create_table = true;
+}
+if (isset($args["dry_run"])) {
+    $dry_run = true;
+}
+if (isset($args["skip_invalid"])) {
+    $skip_invalid = true;
 }
 
 if ($create_table) {
@@ -75,20 +77,33 @@ if ($create_table) {
         exit(1);
     }
 
-    $sql = "CREATE TABLE IF NOT EXISTS users (
-        id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(30) NOT NULL,
-        surname VARCHAR(30) NOT NULL,
-        email VARCHAR(50) NOT NULL UNIQUE
-    )";
+    $result = $conn->query("SHOW TABLES LIKE 'users'");
+    if ($result && $result->num_rows > 0) {
+        $sql = "TRUNCATE TABLE users";
+        if ($conn->query($sql) === false) {
+            echo "Error truncating table: " . $conn->error . "\n";
+            $conn->close();
+            exit(1);
+        }
 
-    if ($conn->query($sql) === false) {
-        echo "Error creating table: " . $conn->error . "\n";
-        $conn->close();
-        exit(1);
+        echo "Table truncated successfully.\n";
+    } else {
+
+        $sql = "CREATE TABLE IF NOT EXISTS users (
+            id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(30) NOT NULL,
+            surname VARCHAR(30) NOT NULL,
+            email VARCHAR(50) NOT NULL UNIQUE
+        )";
+
+        if ($conn->query($sql) === false) {
+            echo "Error creating table: " . $conn->error . "\n";
+            $conn->close();
+            exit(1);
+        }
+
+        echo "Table created successfully.\n";
     }
-
-    echo "Table created successfully.\n";
     $conn->close();
 }
 
@@ -151,6 +166,8 @@ if (isset($args["file"])) {
         // https://www.kalzumeus.com/2010/06/17/falsehoods-programmers-believe-about-names/
         $row[0] = ucfirst($row[0]);
         $row[1] = ucfirst($row[1]);
+        // Set email to lowercase
+        $row[2] = strtolower($row[2]);
         $data[] = $row;
         $line_number++;
         $lines_read++;
@@ -163,35 +180,32 @@ if (isset($args["file"])) {
     }
     echo "File read successfully. $lines_read lines read.\n";
 
-    foreach ($data as $entry) {
-        echo "Inserting $entry[0] $entry[1] $entry[2] into database.\n";
-    }
-
-    $conn = new mysqli($sql_host, $sql_user, $sql_pass, $sql_db);
-    if ($conn->connect_error) {
-        fwrite(STDERR, "Error: Connection failed: " . $conn->connect_error . "\n");
-        exit(1);
-    }
-    $statement = $conn->prepare("INSERT INTO users (name, surname, email) VALUES (?, ?, ?)");
-    $entries_inserted = 0;
-    foreach ($data as $entry) {
-        $statement->bind_param("sss", $entry[0], $entry[1], $entry[2]);
-        try {
-            $statement->execute();
-        } catch (Exception $e) {
-            fwrite(STDERR, "Error: " . $e->getMessage() . "\n");
-            echo "Skipping.\n";
-            $entries_inserted--;
+    if (!($dry_run)) {
+        $conn = new mysqli($sql_host, $sql_user, $sql_pass, $sql_db);
+        if ($conn->connect_error) {
+            fwrite(STDERR, "Error: Connection failed: " . $conn->connect_error . "\n");
+            exit(1);
         }
-        $entries_inserted++;
+        $statement = $conn->prepare("INSERT INTO users (name, surname, email) VALUES (?, ?, ?)");
+        $entries_inserted = 0;
+        foreach ($data as $entry) {
+            $statement->bind_param("sss", $entry[0], $entry[1], $entry[2]);
+            try {
+                $statement->execute();
+                $entries_inserted++;
+            } catch (Exception $e) {
+                fwrite(STDERR, "Error: " . $e->getMessage() . "\n");
+                echo "Skipping.\n";
+            }
+        }
+        $statement->close();
+        $conn->close();
+        if ($entries_inserted === 0) {
+            fwrite(STDERR, "Error: No entries inserted.\n");
+            exit(1);
+        }
+        echo "$entries_inserted entries inserted successfully.\n";
     }
-    $statement->close();
-    $conn->close();
-    if ($entries_inserted === 0) {
-        fwrite(STDERR, "Error: No entries inserted.\n");
-        exit(1);
-    }
-    echo "$entries_inserted entries inserted successfully.\n";
     exit(0);
 }
 
