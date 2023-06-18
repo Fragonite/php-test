@@ -33,3 +33,5 @@ Arguments:
     --skip_invalid    Skip invalid CSV records instead of exiting.
     --help            Show this help message.
 ```
+
+If the script won't run, make sure `mysqli` and `fileinfo` are available. On Ubuntu, you can try running `sudo apt install php-mysqli`.
