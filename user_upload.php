@@ -16,7 +16,7 @@
 
     $help_output = "
 Description:
-    This example script can create and insert data into a table called \"users\".
+    This example script can create and insert data into a table called 'users'.
     It takes a CSV file with three columns: name, surname, email.
 
 Usage:
@@ -27,10 +27,10 @@ Arguments:
     -h                MySQL hostname. Example: 203.0.113.50:3306 [default: $sql_host]
     -u                MySQL username. [default: $sql_user]
     -p                MySQL password. [default: $sql_pass]
-    --create_table    Create/truncate a table called 'users' in the database. Data can be permanently deleted.
-    --file            CSV file path used to insert data into \"users\" table.
-    --dry_run         Run the script without inserting data into \"users\" table.
-    --no_log          Do not log exceptions to \"user_upload.log\".
+    --create_table    Create/truncate a table called 'users' in the database. Data can be permanently deleted!
+    --file            CSV file path used to insert data into 'users' table.
+    --dry_run         Run the script without inserting data into 'users' table.
+    --no_log          Do not log exceptions to 'user_upload.log'.
     --skip_invalid    Skip invalid CSV records instead of exiting.
     --help            Show this help message.
 ";
